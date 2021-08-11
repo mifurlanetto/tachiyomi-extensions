@@ -14,7 +14,7 @@ import org.jsoup.nodes.Element
 import rx.Observable
 
 class oots : ParsedHttpSource() {
-    override val name = "OOTS"
+    override val name = "The Order Of The Stick (OOTS)"
 
     override val baseUrl = "https://www.giantitp.com"
 
@@ -34,7 +34,7 @@ class oots : ParsedHttpSource() {
         }
 
         manga.initialized = true
-        return Observable.just(MangasPage(arrayListOf(manga), false))
+        return Observable.just(MangasPage(listOf(manga), false))
     }
 
     override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> = Observable.just(MangasPage(emptyList(), false))
