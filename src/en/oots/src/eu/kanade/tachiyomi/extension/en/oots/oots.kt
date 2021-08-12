@@ -1,6 +1,6 @@
 package eu.kanade.tachiyomi.extension.en.oots
 
-import android.util.Log
+import android.app.Application
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
@@ -12,6 +12,8 @@ import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import rx.Observable
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 class oots : ParsedHttpSource() {
     override val name = "The Order Of The Stick (OOTS)"
@@ -52,18 +54,33 @@ class oots : ParsedHttpSource() {
     override fun chapterListSelector() = "p.ComicList a"
 
     override fun chapterFromElement(element: Element): SChapter {
-        val nameRegex =
-            """/(.*)/""".toRegex()
+
+        val seriesPrefs = Injekt.get<Application>().getSharedPreferences("source_${id}_time_found", 0)
+        val seriesPrefsEditor = seriesPrefs.edit()
+
         val chapter = SChapter.create()
         chapter.url = element.attr("href")
         chapter.name = element.text()
-        chapter.date_upload = System.currentTimeMillis()
+
+        val numberRegex = """oots(\d+)\.html""".toRegex()
+        val number = numberRegex.find(chapter.url)!!.groupValues[1]
+
+        // Save current time when a chapter is found for the first time, and reuse it on future checks to
+        // prevent manga entry without any new chapter bumped to the top of "Latest chapter" list
+        // when the library is updated.
+        val currentTimeMillis = System.currentTimeMillis()
+        if (!seriesPrefs.contains(number)) {
+            seriesPrefsEditor.putLong(number, currentTimeMillis)
+        }
+
+        chapter.date_upload = seriesPrefs.getLong(number, currentTimeMillis)
+
+        seriesPrefsEditor.apply()
+
         return chapter
     }
 
     override fun pageListParse(document: Document): List<Page> {
-        val urlRegex =
-            """/.*/\d*/""".toRegex()
         val pages = mutableListOf<Page>()
 
         fun addPage(document: Document) {
